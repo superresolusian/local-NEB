@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.scijava</groupId>
+        <artifactId>pom-scijava</artifactId>
+        <version>27.0.1</version>
+        <relativePath />
+    </parent>
+
+
+    <groupId>superresolusian</groupId>
+    <artifactId>pombe-tools</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+
+    <name>PombeTools</name>
+    <description>A Maven project for my PombeTools</description>
+    <url>http://mycompany.com/imagej/process-pixels/</url>
+    <inceptionYear>2019</inceptionYear>
+    <organization>
+        <name>Siuwe schmulley sholutionsh</name>
+        <url>http://siuweschmulleysholutionsh.com/</url>
+    </organization>
+
+    <licenses>
+        <license>
+            <name>Simplified BSD License</name>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>superresolusian</id>
+            <name>Siân Culley</name>
+            <url>https://imagej.net/User:superresolusian</url>
+            <roles>
+                <role>lead</role>
+                <role>developer</role>
+                <role>debugger</role>
+                <role>reviewer</role>
+                <role>support</role>
+                <role>maintainer</role>
+            </roles>
+        </developer>
+    </developers>
+    <contributors>
+        <contributor>
+            <name>Uwe Schmidt</name>
+            <url>https://imagej.net/User:uschmidt83</url>
+            <roles>
+                <role>support</role>
+                <!-- <role>codebae</role> -->
+                <!-- <role>sian-wrangler</role> -->
+            </roles>
+        </contributor>
+    </contributors>
+
+    <mailingLists>
+        <mailingList>
+            <name>Image.sc Forum</name>
+            <archive>https://forum.image.sc/tags/imagej</archive>
+        </mailingList>
+    </mailingLists>
+
+    <scm>
+        <connection>scm:git:git://github.com/superresolusian/pombe-tools</connection>
+        <developerConnection>scm:git:git@github.com:superresolusian/pombe-tools</developerConnection>
+        <tag>HEAD</tag>
+        <url>https://github.com/superresolusian/pombe-tools</url>
+    </scm>
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/superresolusian/pombe-tools/issues</url>
+    </issueManagement>
+    <ciManagement>
+        <system>None</system>
+    </ciManagement>
+
+    <properties>
+        <package-name>com.mycompany.pombetools</package-name>
+        <main-class>com.mycompany.pombetools.BasicGUI_</main-class>
+        <license.licenseName>bsd_2</license.licenseName>
+        <license.copyrightOwners>My Company, Inc.</license.copyrightOwners>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>net.imagej</groupId>
+            <artifactId>ij</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    
+
+</project>
