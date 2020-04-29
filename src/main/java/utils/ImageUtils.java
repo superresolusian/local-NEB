@@ -2,7 +2,9 @@ package utils;
 
 import ij.ImageStack;
 import ij.process.FloatProcessor;
+import ij.process.ImageProcessor;
 
+import static ij.process.ImageProcessor.NO_LUT_UPDATE;
 import static java.lang.Math.max;
 import static java.lang.Math.sqrt;
 
@@ -63,5 +65,17 @@ public class ImageUtils {
             imsOut.setProcessor(new FloatProcessor(w, h, pixels), i+1);
         }
         return imsOut;
+    }
+
+    public static double getThresholdForIp(ImageProcessor ip){
+        ip.setAutoThreshold("Default", true, NO_LUT_UPDATE);
+        double threshold = ip.getAutoThreshold();
+        return threshold;
+    }
+
+    public static float getMaxOfImage(FloatProcessor ip){
+        float imageMaxVal = 0;
+        for(int i=0; i<ip.getPixelCount(); i++) imageMaxVal = max(imageMaxVal, ip.getf(i));
+        return imageMaxVal;
     }
 }

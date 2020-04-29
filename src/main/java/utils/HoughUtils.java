@@ -7,6 +7,7 @@ import ij.gui.Plot;
 import ij.measure.CurveFitter;
 import ij.plugin.HyperStackConverter;
 import ij.process.FloatProcessor;
+import ij.process.ImageProcessor;
 
 import java.awt.*;
 
@@ -149,4 +150,87 @@ public class HoughUtils {
 
     }
 
+    public static ImageStack getHoughAccumulators(ImageProcessor ip, int minRadius, int maxRadius, double increment, double threshold){
+        int w = ip.getWidth();
+        int h = ip.getHeight();
+
+        float[] pixels = (float[]) ip.convertToFloatProcessor().getPixels();
+
+        int wAcc = w + 2 * maxRadius;
+        int hAcc = h + 2 * maxRadius;
+        int nHoughs = (int) ((maxRadius - minRadius) * (1 / increment) + 1);
+
+        ImageStack imsAccumulators = new ImageStack(wAcc, hAcc, nHoughs);
+
+        for (int rad_ = 0; rad_ < nHoughs; rad_++) {
+            int rad = (int) (minRadius + rad_ * increment);
+
+            float[] accumulator = new float[wAcc * hAcc];
+
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+
+                    int p = x + y * w;
+
+                    if (pixels[p] < threshold) continue;
+
+                    for (int theta = 0; theta < 360; theta++) {
+
+                        double a = x - rad * cos(toRadians(theta));
+                        double b = y - rad * sin(toRadians(theta));
+
+                        int a_ = (int) (a + maxRadius);
+                        int b_ = (int) (b + maxRadius);
+
+                        // weight by original pixel intensity
+                        accumulator[a_ + b_ * wAcc] += pixels[p] / 360; // val?
+                    }
+
+                }
+
+            }
+
+            imsAccumulators.setProcessor(new FloatProcessor(wAcc, hAcc, accumulator), rad_ + 1);
+        }
+
+        imsAccumulators = imsAccumulators.crop(maxRadius - 1, maxRadius - 1, 0, w, h, nHoughs);
+
+        return imsAccumulators;
+    }
+
+    public static Polygon peaksLocalMax(ImageProcessor ip, int minDistance, double threshold){
+
+        int w = ip.getWidth();
+        int h = ip.getHeight();
+
+        ImageProcessor ipMax = ip.duplicate();
+        Polygon maxima = new Polygon();
+
+        //non maximum filter
+        for(int y=minDistance; y<h-minDistance-1; y++){
+            for(int x=minDistance; x<w-minDistance-1; x++){
+
+                float maxVal = 0;
+
+                for(int y_=y-minDistance; y_<=y+minDistance; y_++){
+                    for(int x_=x-minDistance; x_<=x+minDistance; x_++){
+                        maxVal = max(maxVal, ip.getf(x_,y_));
+                    }
+                }
+
+                ipMax.setf(x, y, maxVal);
+            }
+        }
+
+        for(int y=minDistance; y<h-minDistance-1; y++){
+            for(int x=minDistance; x<w-minDistance-1; x++){
+                float valMax = ipMax.getf(x,y);
+                float valIm = ip.getf(x,y);
+                if(valIm>threshold && valIm==valMax) maxima.addPoint(x, y);
+            }
+        }
+
+        return maxima;
+
+    }
 }

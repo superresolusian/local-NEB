@@ -8,7 +8,6 @@ import ij.gui.PointRoi;
 import ij.measure.ResultsTable;
 import ij.plugin.ChannelSplitter;
 import ij.plugin.HyperStackConverter;
-import ij.plugin.filter.MaximumFinder;
 import ij.plugin.frame.RoiManager;
 import ij.process.FloatProcessor;
 
@@ -18,26 +17,26 @@ import java.util.ArrayList;
 
 import static java.lang.Math.*;
 import static utils.ArrayUtils.intToFloat;
-import static utils.HoughUtils.getOptimumRange;
 import static utils.HoughUtils.getRadius;
+import static utils.HoughUtils.peaksLocalMax;
 import static utils.ImageUtils.getFpStats;
+import static utils.ImageUtils.getThresholdForIp;
 import static utils.ImageUtils.groupedZProject;
-import static utils.ImageUtils.maxProject;
 
 public class OffsetFinder_ extends BaseGUI_  {
 
     ChannelSplitter CS = new ChannelSplitter();
-    MaximumFinder MF = new MaximumFinder();
+    //MaximumFinder MF = new MaximumFinder();
     RoiManager rm;
 
     public int maxRadius, minRadius;
     public int nChannels, nHoughs;
 
-    int tolerance1, tolerance2;
     int w, h, nFrames;
     int averaging = 1;
 
-    double autoThreshold1, autoThreshold2, autoTolerance1, autoTolerance2;
+    double autoThreshold1, autoThreshold2;
+    double tolModifier1, tolModifier2;
     double pixelSize, maxDisplacement, maxDisplacementPx, threshold1, threshold2;
     double[] thresholds, tolerances;
 
@@ -82,9 +81,6 @@ public class OffsetFinder_ extends BaseGUI_  {
         float[] fp2Stats = getFpStats(fp2);
         autoThreshold2 = fp2Stats[0] + fp2Stats[1];
 
-        autoTolerance1 = autoThreshold1;
-        autoTolerance2 = autoThreshold2/2;
-
 
         gd = new NonBlockingGenericDialog("Radius difference between channels");
         gd.addNumericField("Pixel size (nm)", getPrefs("pixelSize", 100), 1);
@@ -95,8 +91,8 @@ public class OffsetFinder_ extends BaseGUI_  {
         gd.addNumericField("Intensity threshold in channel 1", autoThreshold1, 0);
         gd.addNumericField("Intensity threshold in channel 2", autoThreshold2, 0);
         gd.addMessage("Please make sure you have set the above values before proceeding :-)");
-        gd.addNumericField("Tolerance for peak detections in channel 1", autoTolerance1,0);
-        gd.addNumericField("Tolerance for peak detections in channel 2", autoTolerance2,0);
+        gd.addNumericField("Tolerance modifier for peak detections in channel 1", getPrefs("tolModifier1", 0.75), 2);
+        gd.addNumericField("Tolerance modifier for peak detections in channel 2", getPrefs("tolModifier2", 0.5), 2);
         gd.addChoice("Image for z correction", imageTitles, imageTitles[0]);
         gd.addCheckbox("Manually curate results?", getPrefs("doManualCuration", true));
     }
@@ -116,10 +112,10 @@ public class OffsetFinder_ extends BaseGUI_  {
         setPrefs("threshold1", threshold1);
         threshold2 = gd.getNextNumber();
         setPrefs("threshold2", threshold2);
-        tolerance1 = (int) gd.getNextNumber();
-        setPrefs("tolerance1", tolerance1);
-        tolerance2 = (int) gd.getNextNumber();
-        setPrefs("tolerance2", tolerance2);
+        tolModifier1 = gd.getNextNumber();
+        setPrefs("tolModifier1", tolModifier1);
+        tolModifier2 = gd.getNextNumber();
+        setPrefs("tolModifier2", tolModifier2);
 
         String path = gd.getNextChoice();
         if(path.equals(imageTitles[0])) doZCorrection = false;
@@ -139,8 +135,8 @@ public class OffsetFinder_ extends BaseGUI_  {
 
 
         tolerances = new double[2];
-        tolerances[0] = tolerance1;
-        tolerances[1] = tolerance2;
+        tolerances[0] = tolModifier1;
+        tolerances[1] = tolModifier2;
 
         maxDisplacementPx = maxDisplacement/pixelSize;
 
@@ -290,9 +286,9 @@ public class OffsetFinder_ extends BaseGUI_  {
         for(int ch=1; ch<=nChannels; ch++){
 
             FloatProcessor fp = ims_.getProcessor(ch).convertToFloatProcessor();
-
-            Polygon poly = MF.getMaxima(fp, tolerances[ch-1], true);
-            //IJ.log("prominence for find maxima is "+tolerance*(thresholds[ch-1]/thresholds[0]));
+            double houghThreshold = getThresholdForIp(fp);
+            // IJ.log("prominence for find maxima is "+tolerance*(thresholds[ch-1]/thresholds[0]));
+            Polygon poly = peaksLocalMax(fp, maxRadius, houghThreshold*tolerances[ch-1]);
             PointRoi roi = new PointRoi(poly);
             roi.setStrokeColor(colors[ch-1]);
             roi.setPointType(2);
@@ -345,8 +341,7 @@ public class OffsetFinder_ extends BaseGUI_  {
                 float yC_ = yChannel1[p];
 
                 if(xC_==0 && yC_==0){
-                    //ij maximumfinder is a piece of crap so loads of detections at origin
-                    //IJ.log("piece of crap");
+                    //purge random detections at origin
                     isPeakGood[p] = false;
                     continue;
                 }
@@ -366,10 +361,10 @@ public class OffsetFinder_ extends BaseGUI_  {
                             bestDist = dist;
                         }
                     }
-                    if(bestDist>3){
-                        isPeakGood[p] = false;
-                        continue;
-                    }
+//                    if(bestDist>5){
+//                        isPeakGood[p] = false;
+//                        continue;
+//                    }
                     xC_ = thisX[bestInd];
                     yC_ = thisY[bestInd];
 
