@@ -1,5 +1,7 @@
 package utils;
 
+import java.awt.*;
+
 public class ArrayUtils {
 
     public static double getLimitArray(double[] array, boolean isMin){
@@ -38,6 +40,12 @@ public class ArrayUtils {
         for(int i=0; i<n; i++) floatArray[i] = (float) array[i];
         return  floatArray;
     }
+
+    public static int ravel(int x, int y, int w) {
+        return y * w + x;
+    }
+
+    public static int[] unravel(int ind, int w) { return new int[]{ind % w, ind / w}; }
 
 
 }

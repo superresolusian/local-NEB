@@ -233,4 +233,52 @@ public class HoughUtils {
         return maxima;
 
     }
+
+    public static int[] circlePairMatchingAngle(Polygon maxima, double targetAngle, double angleTol){
+        int nMaxima = maxima.npoints;
+        int[] c1_, c2_;
+        int i_, j_;
+        int[] bestPair = new int[2];
+        double bestAngleDiff = Double.MAX_VALUE;
+
+        for(int i=0; i<nMaxima-1; i++){
+            int[] c1 = new int[]{maxima.xpoints[i], maxima.ypoints[i]};
+
+            for(int j=i+1; j<nMaxima; j++){
+                int[] c2 = new int[]{maxima.xpoints[j], maxima.ypoints[j]};
+
+                if(c1[0]<c2[0]){
+                    c1_ = c1;
+                    c2_ = c2;
+                    i_ = i;
+                    j_ = j;
+                }
+                else{
+                    c1_ = c2;
+                    c2_ = c1;
+                    i_ = j;
+                    j_ = i;
+                }
+
+                int dx = c2_[0]-c1_[0];
+                int dy = c2_[1]-c1_[1];
+
+                double angle = atan(dy/dx);
+                double diff = abs(targetAngle-angle);
+
+                if(diff<bestAngleDiff){
+                    bestPair = new int[]{i_,j_};
+                    bestAngleDiff = diff;
+                }
+
+            }
+        }
+        if(bestAngleDiff<angleTol){
+            return bestPair;
+        }
+        else{
+            return new int[]{-1,-1};
+        }
+    }
+
 }
