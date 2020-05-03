@@ -1,5 +1,6 @@
 package utils;
 
+import ij.IJ;
 import ij.gui.Line;
 import ij.process.ImageProcessor;
 import ij.process.ShortProcessor;
@@ -13,8 +14,17 @@ import java.util.List;
 import static java.lang.Math.*;
 import static utils.ArrayUtils.ravel;
 import static utils.ArrayUtils.unravel;
+import static utils.ImageUtils.getMaxOfImage;
 
 public class PixelPathUtils {
+
+    final static int ENDPOINTS_IN_DIFFERENT_CIRCLES = 5;
+    final static int ENDPOINTS_IN_CIRCLE1 = 4;
+    final static int ENDPOINTS_IN_CIRCLE2 = 3;
+    final static int ONE_ENDPOINT_IN_CIRCLE1 = 2;
+    final static int ONE_ENDPOINT_IN_CIRCLE2 = 1;
+    final static int NO_ENDPOINTS_IN_CIRCLES = 0;
+    final static int CIRCLES_OVERLAP = -1;
 
     public static short[] connectedComponents(ImageProcessor ip){
         int w = ip.getWidth();
@@ -403,6 +413,9 @@ public class PixelPathUtils {
         ArrayList<int[]> endPoints = skeletonprops.endpointsList;
         ArrayList<int[]> branchPoints = skeletonprops.branchpointsList;
 
+        IJ.log("Endpoints size is "+endPoints.size());
+        if(endPoints.size()<2) return endPoints;
+
         while(endPoints.size()>2) {
             // find endpoint with shortest distance to branchpoint
             double shortestBranchLength = Double.MAX_VALUE;
@@ -421,18 +434,23 @@ public class PixelPathUtils {
             endPoints.remove(endpointOfShortestBranch);
         }
 
-        // sort by x
-        ArrayList<int[]> sortedEndpoints = new ArrayList<>(2);
-        if(endPoints.get(0)[0]<endPoints.get(1)[0]){
-            sortedEndpoints.set(0, endPoints.get(0));
-            sortedEndpoints.set(1, endPoints.get(1));
-        }
-        else{
-            sortedEndpoints.set(0, endPoints.get(1));
-            sortedEndpoints.set(1, endPoints.get(0));
-        }
+        IJ.log("Endpoints size is "+endPoints.size());
+        IJ.log("endpoint 1: ("+endPoints.get(0)[0]+", "+endPoints.get(0)[1]+")");
+        IJ.log("endpoint 2: ("+endPoints.get(1)[0]+", "+endPoints.get(1)[1]+")");
+        return endPoints;
 
-        return sortedEndpoints;
+//        // sort by x
+//        ArrayList<int[]> sortedEndpoints = endPoints;
+//        if(endPoints.get(0)[0]<endPoints.get(1)[0]){
+//            sortedEndpoints.set(0, endPoints.get(0));
+//            sortedEndpoints.set(1, endPoints.get(1));
+//        }
+//        else{
+//            sortedEndpoints.set(0, endPoints.get(1));
+//            sortedEndpoints.set(1, endPoints.get(0));
+//        }
+//
+//        return sortedEndpoints;
     }
 
     public static int[] pathExcludeCircle(int[] path, int[] c1, double r1, int[] c2, double r2, int w){
@@ -446,6 +464,78 @@ public class PixelPathUtils {
         for(int i=0; i<newPath.size(); i++) newPathArray[i] = newPath.get(i);
 
         return newPathArray;
+    }
+
+    public static int[] getBridge(ShortProcessor spSegmented, int[] c1, double r1, int[] c2, double r2){
+        int w = spSegmented.getWidth();
+
+        int[] pixelPath;
+
+        int nSegments = (int) getMaxOfImage(spSegmented);
+        ArrayList<regionProps> propsList = new ArrayList<>();
+
+        if(nSegments==0) return;
+
+        // if only one segment, must be anchored in both circles
+        if(nSegments==1){
+            regionProps props = getProps(1, spSegmented);
+            int[] endPoints = props.endPoints;
+            int anchor = anchoredEndpoints(endPoints, w, c1, r1, c2, r2);
+            if(anchor==ENDPOINTS_IN_DIFFERENT_CIRCLES){
+                return; //TODO: change to return pixel path!!
+            }
+            else{
+                return new int[0];
+            }
+        }
+        else{
+            int[] anchorsPerSegment = new int[nSegments];
+            for(int s=0; s<nSegments; s++){
+                regionProps props = getProps(s+1, spSegmented);
+                int[] endPoints = props.endPoints;
+                int anchor = anchoredEndpoints(endPoints, w, c1, r1, c2, r2);
+                if(anchor==ENDPOINTS_IN_DIFFERENT_CIRCLES){
+                    return; // TODO: return this path!
+                }
+                anchorsPerSegment[s] = anchor;
+            }
+
+
+
+
+
+
+
+        }
+
+
+
+    }
+
+    public static int anchoredEndpoints(int[] endPoints, int w, int[] c1, double r1, int[] c2, double r2){
+
+        int endpointsInC1 = 0;
+        int endpointsInC2 = 0;
+
+        for(int i=0; i<endPoints.length; i++){
+            int p = endPoints[i];
+            int[] xy = unravel(p, w);
+
+            double distToC1 = getDistance(xy, c1);
+            double distToC2 = getDistance(xy, c2);
+
+            if(distToC1<r1) endpointsInC1++;
+            if(distToC2<r2) endpointsInC2++;
+        }
+
+        if(endpointsInC1==0 && endpointsInC2==0) return NO_ENDPOINTS_IN_CIRCLES;
+        if(endpointsInC1==1 && endpointsInC2==0) return ONE_ENDPOINT_IN_CIRCLE1;
+        if(endpointsInC1==0 && endpointsInC2==1) return ONE_ENDPOINT_IN_CIRCLE2;
+        if(endpointsInC1==1 && endpointsInC2==1) return ENDPOINTS_IN_DIFFERENT_CIRCLES;
+        if(endpointsInC1==2 && endpointsInC2==0) return ENDPOINTS_IN_CIRCLE1;
+        if(endpointsInC1==0 && endpointsInC2==2) return ENDPOINTS_IN_CIRCLE2;
+        return CIRCLES_OVERLAP;
+
     }
 
 }

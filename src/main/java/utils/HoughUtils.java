@@ -281,4 +281,32 @@ public class HoughUtils {
         }
     }
 
+    public static double[] getHoughValsFromPeakSingleChannel(ImageStack ims, int xC, int yC, int nHoughs, int averaging){
+
+        int w = ims.getWidth();
+        int h = ims.getHeight();
+
+        double[] houghVals = new double[nHoughs];
+
+        for (int r = 1; r <= nHoughs; r++) {
+
+            FloatProcessor fp = ims.getProcessor(r).convertToFloatProcessor();
+
+            int counter = 0;
+            double avVal = 0;
+
+            for(int y = max(0, yC-averaging); y<=min(yC+averaging, h-1); y++){
+                for (int x = max(0, xC - averaging); x <= min(xC + averaging, w - 1); x++) {
+                    avVal += fp.getf(x, y);
+                    counter++;
+                }
+            }
+            avVal /= counter;
+
+            houghVals[r-1] = avVal;
+
+        }
+        return houghVals;
+    }
+
 }

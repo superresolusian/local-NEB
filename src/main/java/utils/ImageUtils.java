@@ -1,6 +1,7 @@
 package utils;
 
 import ij.ImageStack;
+import ij.gui.Roi;
 import ij.plugin.filter.Binary;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
@@ -153,5 +154,37 @@ public class ImageUtils {
 
         return imsOut;
     }
+
+    public static double[] getBackground(ImageStack ims, Roi roi){
+
+        int nFrames = ims.getSize();
+        Rectangle roiBoundsBG = roi.getBounds();
+
+        int xTopLeftBG = roiBoundsBG.x;
+        int yTopLeftBG = roiBoundsBG.y;
+        int wBG = roiBoundsBG.width;
+        int hBG = roiBoundsBG.height;
+        int nPixelsBG = wBG*hBG;
+
+        ImageStack imsCrop = ims.crop(xTopLeftBG, yTopLeftBG, 0, wBG, hBG, nFrames);
+
+        double[] background = new double[nFrames];
+
+        for(int n=1; n<=nFrames; n++){
+            ImageProcessor ip1 = imsCrop.getProcessor(n);
+
+            double avBG1 = 0;
+            for(int y=0; y<hBG; y++){
+                for(int x=0; x<wBG; x++){
+                    avBG1 += ip1.getf(x, y)/nPixelsBG;
+                }
+            }
+            background[n-1] = avBG1;
+        }
+
+        return background;
+
+    }
+
 
 }
