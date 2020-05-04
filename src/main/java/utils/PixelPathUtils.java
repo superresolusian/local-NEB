@@ -6,9 +6,7 @@ import ij.process.ImageProcessor;
 import ij.process.ShortProcessor;
 
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
+import java.util.*;
 import java.util.List;
 
 import static java.lang.Math.*;
@@ -466,48 +464,150 @@ public class PixelPathUtils {
         return newPathArray;
     }
 
-    public static int[] getBridge(ShortProcessor spSegmented, int[] c1, double r1, int[] c2, double r2){
+    public static int[] getBridge(ShortProcessor spSegmented, int[] c1, double r1, int[] c2, double r2, int minLength, double minSeparation){
         int w = spSegmented.getWidth();
 
         int[] pixelPath;
 
         int nSegments = (int) getMaxOfImage(spSegmented);
-        ArrayList<regionProps> propsList = new ArrayList<>();
 
-        if(nSegments==0) return;
+        if(nSegments==0) return new int[0];
 
-        // if only one segment, must be anchored in both circles
-        if(nSegments==1){
-            regionProps props = getProps(1, spSegmented);
+        LinkedHashMap<Integer, int[]> endpointInC1 = new LinkedHashMap<>();
+        LinkedHashMap<Integer, int[]> endpointInC2 = new LinkedHashMap<>();
+
+        for(int s=0; s<nSegments; s++) {
+            regionProps props = getProps(s + 1, spSegmented);
+            int area = props.area;
+            if (area < minLength) continue;
             int[] endPoints = props.endPoints;
             int anchor = anchoredEndpoints(endPoints, w, c1, r1, c2, r2);
-            if(anchor==ENDPOINTS_IN_DIFFERENT_CIRCLES){
-                return; //TODO: change to return pixel path!!
+            if (anchor == ENDPOINTS_IN_DIFFERENT_CIRCLES) {
+                pixelPath = getPath(props, unravel(endPoints[0], w), unravel(endPoints[1], w), spSegmented, s + 1);
+                return pixelPath; // TODO: return this path!
+            }
+            if (anchor == ONE_ENDPOINT_IN_CIRCLE1) endpointInC1.put(s + 1, endPoints);
+            if (anchor == ONE_ENDPOINT_IN_CIRCLE2) endpointInC2.put(s + 1, endPoints);
+        }
+
+        // no anchored endpoints for segments >minLength - check distance between centres and return straight line or null
+        if(endpointInC1.size()==0 && endpointInC2.size()==0){
+            double distBetweenCircles = getDistance(c1, c2);
+            if(distBetweenCircles>minSeparation){
+                //return straight line connecting centres
+                pixelPath = getLineCoordinates(asPoint(c1), asPoint(c2), w);
+                return pixelPath;
+            }
+            else return new int[0];
+        }
+
+
+        int segmentInC1 = 0, segmentInC2 = 0;
+
+        if (endpointInC1.size()==1) segmentInC1 = endpointInC1.keySet().iterator().next();
+        else if (endpointInC1.size()>1) segmentInC1 = findClosestEndpoint(endpointInC1, w, c1);
+        //TODO: if segmentinC1=0 then use c1
+
+        if (endpointInC2.size()==1) segmentInC2 = endpointInC2.keySet().iterator().next();
+        else if (endpointInC2.size()>1) segmentInC2 = findClosestEndpoint(endpointInC2, w, c2);
+        //TODO: if segmentinc2=0 then use c2
+
+        // create path
+        ArrayList<int[]> pathPieces = new ArrayList<>();
+
+        //case 1: no segment in c1, segment in c2
+        if(segmentInC1==0){
+            Point p0, p1;
+            // join c1 to 'free' endpoint, add c2 segment path
+            p0 = asPoint(c1);
+
+            int[] segmentPath;
+            regionProps segmentProps = getProps(segmentInC2, spSegmented);
+
+            ArrayList<int[]> c2Endpoints = segmentProps.endpointsList;
+            double diste0ToC2 = getDistance(c2Endpoints.get(0), c2);
+            double diste1ToC2 = getDistance(c2Endpoints.get(1), c2);
+            if(diste0ToC2<diste1ToC2) {
+                //element 0 is in centre2, element 1 is pointing towards c1
+                p1 = asPoint(c2Endpoints.get(1));
+                segmentPath = getPath(segmentProps, c2Endpoints.get(1), c2Endpoints.get(0), spSegmented, segmentInC2);
             }
             else{
-                return new int[0];
+                p1 = asPoint(c2Endpoints.get(0));
+                segmentPath = getPath(segmentProps, c2Endpoints.get(0), c2Endpoints.get(1), spSegmented, segmentInC2);
             }
+
+            pathPieces.add(getLineCoordinates(p0, p1, w));
+            pathPieces.add(segmentPath);
         }
+        //case 2: segment in c1, no segment in c2
+        else if(segmentInC2==0){
+            Point p0, p1;
+            // join c2 to 'free' endpoint, add c1 segment path
+            p0 = asPoint(c2);
+
+            int[] segmentPath;
+            regionProps segmentProps = getProps(segmentInC1, spSegmented);
+
+            ArrayList<int[]> c1Endpoints = segmentProps.endpointsList;
+            double diste0ToC1 = getDistance(c1Endpoints.get(0), c1);
+            double diste1ToC1 = getDistance(c1Endpoints.get(1), c1);
+            if(diste0ToC1<diste1ToC1) {
+                //element 0 is in centre1, element 1 is pointing towards c2
+                p1 = asPoint(c1Endpoints.get(1));
+                segmentPath = getPath(segmentProps, c1Endpoints.get(1), c1Endpoints.get(0), spSegmented, segmentInC1);
+            }
+            else{
+                p1 = asPoint(c1Endpoints.get(0));
+                segmentPath = getPath(segmentProps, c1Endpoints.get(0), c1Endpoints.get(1), spSegmented, segmentInC1);
+            }
+
+            pathPieces.add(segmentPath);
+            pathPieces.add(getLineCoordinates(p0, p1, w));
+        }
+        // case 3: two segments need to be joined
         else{
-            int[] anchorsPerSegment = new int[nSegments];
-            for(int s=0; s<nSegments; s++){
-                regionProps props = getProps(s+1, spSegmented);
-                int[] endPoints = props.endPoints;
-                int anchor = anchoredEndpoints(endPoints, w, c1, r1, c2, r2);
-                if(anchor==ENDPOINTS_IN_DIFFERENT_CIRCLES){
-                    return; // TODO: return this path!
-                }
-                anchorsPerSegment[s] = anchor;
+            Point p0, p1;
+            int[] segmentPath1, connectorPath, segmentPath2;
+
+            regionProps segmentProps1 = getProps(segmentInC1, spSegmented);
+
+            ArrayList<int[]> c1Endpoints = segmentProps1.endpointsList;
+            double diste0ToC1 = getDistance(c1Endpoints.get(0), c1);
+            double diste1ToC1 = getDistance(c1Endpoints.get(1), c1);
+            if(diste0ToC1<diste1ToC1) {
+                //element 0 is in centre1, element 1 is pointing towards c2
+                p0 = asPoint(c1Endpoints.get(1));
+                segmentPath1 = getPath(segmentProps1, c1Endpoints.get(1), c1Endpoints.get(0), spSegmented, segmentInC1);
+            }
+            else{
+                p0 = asPoint(c1Endpoints.get(0));
+                segmentPath1 = getPath(segmentProps1, c1Endpoints.get(0), c1Endpoints.get(1), spSegmented, segmentInC1);
             }
 
+            regionProps segmentProps2 = getProps(segmentInC2, spSegmented);
 
+            ArrayList<int[]> c2Endpoints = segmentProps2.endpointsList;
+            double diste0ToC2 = getDistance(c2Endpoints.get(0), c2);
+            double diste1ToC2 = getDistance(c2Endpoints.get(1), c2);
+            if(diste0ToC2<diste1ToC2) {
+                //element 0 is in centre2, element 1 is pointing towards c1
+                p1 = asPoint(c2Endpoints.get(1));
+                segmentPath2 = getPath(segmentProps2, c2Endpoints.get(1), c2Endpoints.get(0), spSegmented, segmentInC2);
+            }
+            else{
+                p1 = asPoint(c2Endpoints.get(0));
+                segmentPath2 = getPath(segmentProps2, c2Endpoints.get(0), c2Endpoints.get(1), spSegmented, segmentInC2);
+            }
 
-
-
-
-
+            connectorPath = getLineCoordinates(p0, p1, w);
+            pathPieces.add(segmentPath1);
+            pathPieces.add(connectorPath);
+            pathPieces.add(segmentPath2);
         }
 
+        pixelPath = combinePathPieces(pathPieces);
+        return pixelPath;
 
 
     }
@@ -536,6 +636,78 @@ public class PixelPathUtils {
         if(endpointsInC1==0 && endpointsInC2==2) return ENDPOINTS_IN_CIRCLE2;
         return CIRCLES_OVERLAP;
 
+    }
+
+    public static int findClosestEndpoint(LinkedHashMap<Integer, int[]> endpointsList, int w, int[] c){
+        int bestSegmentValue = 0;
+        double bestDist = Double.MAX_VALUE;
+
+        Set<Integer> keys = endpointsList.keySet();
+
+        for(int key:keys){
+            int[] endpoints = endpointsList.get(key);
+            int[] xy1 = unravel(endpoints[0], w);
+            int[] xy2 = unravel(endpoints[1], w);
+            double distxy1c = getDistance(xy1, c);
+            double distxy2c = getDistance(xy2, c);
+            double dist = min(distxy1c, distxy2c);
+            if(dist<bestDist){
+                bestDist = dist;
+                bestSegmentValue = key;
+            }
+        }
+        return bestSegmentValue;
+    }
+
+    public static Set<Point> getLineCoordinates(final Point p0, final Point p1) {
+        final Set<Point> line = new LinkedHashSet<>();
+        line.add(new Point(p0));
+
+        final int dx = Math.abs(p1.x - p0.x), sx = p0.x < p1.x ? 1 : -1;
+        final int dy = Math.abs(p1.y - p0.y), sy = p0.y < p1.y ? 1 : -1;
+        int err = (dx > dy ? dx : -dy) / 2;
+
+        for (int errLast = err; !p0.equals(p1); errLast = err) {
+            if (errLast > -dx) { err -= dy; p0.x += sx; }
+            if (errLast <  dy) { err += dx; p0.y += sy; }
+            line.add(new Point(p0));
+        }
+        return line;
+    }
+
+    public static int[] getLineCoordinates(final Point p0, final Point p1, int w){
+        Set<Point> line = getLineCoordinates(p0, p1);
+
+        ArrayList<Integer> intList = new ArrayList<>();
+
+        for(Point point:line){
+            int p = ravel(point.x, point.y, w);
+            intList.add(p);
+        }
+
+        int[] intArray = new int[intList.size()];
+        for(int i=0; i<intList.size(); i++){
+            intArray[i] = intList.get(i);
+        }
+
+        return intArray;
+    }
+
+    public static Point asPoint(int[] p){
+        return new Point(p[0], p[1]);
+    }
+
+    public static int[] combinePathPieces(ArrayList<int[]> pathPieces){
+        ArrayList<Integer> combined = new ArrayList<>();
+        for(int[] piece:pathPieces){
+            for(int i=0; i<piece.length; i++){
+                combined.add(piece[i]);
+            }
+        }
+        int[] combinedArray = new int[combined.size()];
+        for(int i=0; i<combined.size(); i++) combinedArray[i] = combined.get(i);
+
+        return combinedArray;
     }
 
 }
