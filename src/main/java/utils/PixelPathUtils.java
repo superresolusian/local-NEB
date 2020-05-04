@@ -484,9 +484,9 @@ public class PixelPathUtils {
             if (area < minLength) continue;
             ArrayList<int[]> endpointsList = props.endpointsList;
 
-            IJ.log("segment value is "+(s+1)+", area is "+area+", " +
-                    "endpoint 1 is ("+endpointsList.get(0)[0]+","+endpointsList.get(0)[1]+"), " +
-                    "endpoint 2 is ("+endpointsList.get(1)[0]+","+endpointsList.get(1)[1]+")");
+//            IJ.log("segment value is "+(s+1)+", area is "+area+", " +
+//                    "endpoint 1 is ("+endpointsList.get(0)[0]+","+endpointsList.get(0)[1]+"), " +
+//                    "endpoint 2 is ("+endpointsList.get(1)[0]+","+endpointsList.get(1)[1]+")");
 
             int anchor = anchoredEndpoints(endpointsList, c1, r1*2, c2, r2*2);
             if (anchor == ENDPOINTS_IN_DIFFERENT_CIRCLES) {

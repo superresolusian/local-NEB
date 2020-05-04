@@ -1,152 +1,111 @@
-package gui;
+package utils;
 
 import ij.IJ;
-import ij.ImageJ;
 import ij.ImagePlus;
 import ij.ImageStack;
-import ij.gui.*;
-import ij.plugin.ChannelSplitter;
+import ij.gui.EllipseRoi;
+import ij.gui.PolygonRoi;
 import ij.plugin.frame.RoiManager;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
 import ij.process.ShortProcessor;
-import utils.PixelPathUtils;
 
 import java.awt.*;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.Random;
 
-import static java.lang.Math.*;
-import static java.lang.Math.cos;
-import static java.lang.Math.sin;
+import static java.lang.Math.abs;
+import static java.lang.Math.toRadians;
 import static utils.HoughUtils.*;
 import static utils.ImageUtils.*;
-import static utils.ImageUtils.getThresholdForIp;
-import static utils.ImageUtils.maxProject;
 import static utils.PixelPathUtils.*;
-import static utils.PixelPathUtils.getAngleBetweenPoints;
-import static utils.PixelPathUtils.getDistance;
 import static utils.RoiUtils.getRandomColorPair;
 
-public class TestTrackerCrop_ extends BaseGUI_ {
-
-
-    int minRadius, maxRadius, strokeWidth;
-    double minLength, maxGap, maxFrameGap, linkingDistance, thresholdModifier, exclusionFraction, blurSize;
-    boolean showHough, showSegmentation, invertLUT, doFit;
-
-    int nFrames;
-
-    Random random = new Random();
-    RoiManager rm = new RoiManager();
-    ChannelSplitter CS = new ChannelSplitter();
+public class TrackerForSingleCrop {
 
     static final double rad30deg = toRadians(30);
 
-    @Override
-    public boolean beforeSetupDialog(String arg) {
-        autoOpenImp = true;
-        return true;
+    private ImageStack ims;
+    private int w, h, nFrames;
+
+    private double blurSize;
+    private boolean invertLUT;
+    private int maxFrameGap;
+    private double exclusionFraction;
+
+    private int minRadius, maxRadius;
+    private double increment;
+    private double thresholdModifier;
+
+    private Color[] colors = getRandomColorPair(true);
+
+    private boolean showHough, showSegmentation;
+    public ImagePlus impHough, impSegmentations;
+    public ImageStack imsHough, imsSegmentations;
+
+    public RoiManager rm;
+    int strokeWidth;
+
+    public void setImageStack(ImageStack ims){
+        this.ims = ims;
+        this.w = ims.getWidth();
+        this.h = ims.getHeight();
+        this.nFrames = ims.getSize();
     }
 
-    @Override
-    public void setupDialog() {
-        gd = new NonBlockingGenericDialog("Bridge tracking");
-        gd.addMessage("~~~ Chough parameters ~~~");
-        gd.addNumericField("Minimum radius (pixels)", getPrefs("minRadius", 5), 0);
-        gd.addNumericField("Maximum radius (pixels)", getPrefs("maxRadius", 20), 0);
-        gd.addNumericField("Threshold modifier (leave at 0.75 unless low SNR)", getPrefs("thresholdModifier", 0.75), 2);
-        gd.addMessage("~~~ Miscellaneous ~~~");
-        gd.addNumericField("Blur size", getPrefs("blurSize", 2), 0);
-        gd.addNumericField("Line width for plotting (pixels)", getPrefs("strokeWidth", 3), 0);
-        gd.addNumericField("Maximum empty frame gap", getPrefs("maxFrameGap", 3), 0);
-        gd.addNumericField("Bridge exclusion fraction relative to radius", getPrefs("exclusionFraction", 1.0), 2);
-        gd.addCheckbox("Do fit", getPrefs("doFit", false));
-        gd.addCheckbox("Show Hough transforms", getPrefs("showHough", false));
-        gd.addCheckbox("Show segmentation", getPrefs("showSegmentation", false));
-        gd.addCheckbox("Invert LUT for skeletonization", getPrefs("invertLUT", true));
+    public void setTrackerOptions(double blurSize, boolean invertLUT, int maxFrameGap, double exclusionFraction) {
+        this.blurSize = blurSize;
+        this.invertLUT = invertLUT;
+        this.maxFrameGap = maxFrameGap;
+        this.exclusionFraction = exclusionFraction;
     }
 
-    @Override
-    public boolean loadSettings() {
-        minRadius = (int) gd.getNextNumber();
-        maxRadius = (int) gd.getNextNumber();
-        thresholdModifier = gd.getNextNumber();
-
-        blurSize = gd.getNextNumber();
-        strokeWidth = (int) gd.getNextNumber();
-        maxFrameGap = gd.getNextNumber();
-        exclusionFraction = gd.getNextNumber();
-
-        doFit = gd.getNextBoolean();
-        showHough = gd.getNextBoolean();
-        showSegmentation = gd.getNextBoolean();
-        invertLUT = gd.getNextBoolean();
-
-
-        setPrefs("minRadius", minRadius);
-        setPrefs("maxRadius", maxRadius);
-        setPrefs("thresholdModifier", thresholdModifier);
-
-        setPrefs("blurSize", blurSize);
-        setPrefs("strokeWidth", strokeWidth);
-        setPrefs("maxFrameGap", maxFrameGap);
-        setPrefs("exclusionFraction", exclusionFraction);
-
-        setPrefs("doFit", doFit);
-        setPrefs("showHough", showHough);
-        setPrefs("showSegmentation", showSegmentation);
-        setPrefs("invertLUT", invertLUT);
-
-        return true;
+    public void setHoughOptions(int minRadius, int maxRadius, double increment, double thresholdModifier){
+        this.minRadius = minRadius;
+        this.maxRadius = maxRadius;
+        this.increment = increment;
+        this.thresholdModifier = thresholdModifier;
     }
 
-    @Override
-    public void execute() throws InterruptedException, IOException {
-        // image preparation
-        nFrames = imp.getNFrames();
-        nChannels = imp.getNChannels();
+    public void setRoiOptions(RoiManager rm, int strokeWidth){
+        this.rm = rm;
+        this.strokeWidth = strokeWidth;
+    }
 
-        ImageStack imsChannel1, imsChannel2 = new ImageStack();
+    public void setDebugOptions(boolean showHough, boolean showSegmentation){
+        this.showHough = showHough;
+        this.showSegmentation = showSegmentation;
+    }
 
-        if(nChannels==2) {
-            imsChannel1 = CS.getChannel(imp, 1);
-            imsChannel2 = CS.getChannel(imp, 2);
+    public void setupPreview(){
+        this.imsHough = new ImageStack(w, h);
+        this.impHough = new ImagePlus("Projected Hough transforms");
+        this.imsSegmentations = new ImageStack(w, h);
+        this.impSegmentations = new ImagePlus("Segmentations");
+    }
+
+    public void updatePreview(boolean isHough, ImageProcessor ip, int n){
+        if (isHough) {
+            imsHough.addSlice(ip);
+            if (n == 1) {
+                impHough.setStack(imsHough);
+                impHough.show();
+            } else {
+                impHough.setSlice(n);
+            }
         }
-        else imsChannel1 = imp.getImageStack();
+        else {
 
-        RoiManager thisManager = new RoiManager().getInstance();
-
-        if(thisManager==null){
-            throw new IOException("Expecting ROI manager containing ROIs!");
         }
-
-        rm = thisManager;
-
-        int nRois = rm.getCount();
-
-        if(nRois==0){
-            throw new IOException("Expecting ROI manager containing ROIs!");
-        }
-
-        double increment = 1;
-
-        // measure background
-        Roi roiBG = rm.getRoi(0);
-        rm.rename(0, "background");
-        double[] backgroundCh1 = getBackground(imsChannel1, roiBG);
-        double[] backgroundCh2 = new double[nFrames];
-        if(nChannels==2) backgroundCh2 = getBackground(imsChannel2, roiBG);
+    }
 
 
-        Color[] colors = getRandomColorPair(true);
-        int w = imp.getWidth();
-        int h = imp.getHeight();
+    public void doTracker(){
+
+        setupPreview();
 
         //// determine division angle
-        ImageStack imsNormalised = normaliseToMax(imsChannel1);
+        ImageStack imsNormalised = normaliseToMax(ims);
         FloatProcessor fpRoiAverageIntensity = averageProject(imsNormalised);
         ImageProcessor ipSkeletonAverage = getSkeletonImage(fpRoiAverageIntensity, blurSize, invertLUT);
 
@@ -211,12 +170,6 @@ public class TestTrackerCrop_ extends BaseGUI_ {
         double bestRadius1 = 0, bestRadius2 = 0;
         double previousRadius1 = 0, previousRadius2 = 0;
 
-        ImageStack imsProjectedHoughs = new ImageStack(w, h);
-        ImagePlus impProjectedHoughs = new ImagePlus("Projected Houghs");
-
-        ImageStack imsSegmentations = new ImageStack(w, h);
-        ImagePlus impSegmentations = new ImagePlus("Segmentations");
-
         for (int n = 1; n <= nFrames; n++) {
             if (continueCounter > maxFrameGap) {
                 IJ.log("max frame gap reached");
@@ -224,7 +177,7 @@ public class TestTrackerCrop_ extends BaseGUI_ {
             }
 
             //// get circles in each frame
-            ImageProcessor ipRoi1 = imsChannel1.getProcessor(n).duplicate();
+            ImageProcessor ipRoi1 = ims.getProcessor(n).duplicate();
             double threshold = getThresholdForIp(ipRoi1);
             IJ.log("image threshold is " + threshold);
 
@@ -235,15 +188,7 @@ public class TestTrackerCrop_ extends BaseGUI_ {
 
             int nHoughs = imsAccumulators.getSize();
 
-            if (showHough) {
-                imsProjectedHoughs.addSlice(fpMaxAccumulator);
-                if (n == 1) {
-                    impProjectedHoughs.setStack(imsProjectedHoughs);
-                    impProjectedHoughs.show();
-                } else {
-                    impProjectedHoughs.setSlice(n);
-                }
-            }
+            if(showHough) updatePreview(true, fpMaxAccumulator, n);
 
             Polygon maxima = peaksLocalMax(fpMaxAccumulator, minRadius, houghThreshold * thresholdModifier);
             int nMaxima = maxima.npoints;
@@ -388,21 +333,12 @@ public class TestTrackerCrop_ extends BaseGUI_ {
             ShortProcessor spSegmented = new ShortProcessor(w, h);
             spSegmented.setPixels(pixelsSegmented);
 
-            if (showSegmentation) {
-                imsSegmentations.addSlice(spSegmented);
-                if (n == 1) {
-                    impSegmentations.setStack(imsSegmentations);
-                    impSegmentations.show();
-                } else {
-                    impSegmentations.setSlice(n);
-                }
-            }
+            if(showSegmentation) updatePreview(false, spSegmented, n);
 
             // find skeletons with endpoints inside circles
             int[] bridge = getBridge(spSegmented, bestCentre1, bestRadius1, bestCentre2, bestRadius2, 2, bestRadius1+bestRadius2);
 
             int[] bridgeNoCircle = pathExcludeCircle(bridge, bestCentre1, radius1exc, bestCentre2, radius2exc, w);
-
 
             PolygonRoi polygonRoi = indicesToPolyline(bridgeNoCircle, w);
             polygonRoi.setStrokeWidth(strokeWidth);
@@ -411,29 +347,7 @@ public class TestTrackerCrop_ extends BaseGUI_ {
             polygonRoi.setName("Frame " + n + " bridge");
             rm.addRoi(polygonRoi);
 
-        }
-
     }
+}
 
-
-    public static void main(String[] args) throws Exception {
-        // set the plugins.dir property to make the plugin appear in the Plugins menu
-        // see: https://stackoverflow.com/a/7060464/1207769
-        Class<?> clazz = TestTrackerCrop_.class;
-        java.net.URL url = clazz.getProtectionDomain().getCodeSource().getLocation();
-        java.io.File file = new java.io.File(url.toURI());
-        System.setProperty("plugins.dir", file.getAbsolutePath());
-
-        // start ImageJ
-        new ImageJ();
-
-        // run the plugin
-        IJ.runPlugIn(clazz.getName(), "");
-    }
-
-
-    @Override
-    public boolean dialogItemChanged(GenericDialog genericDialog, AWTEvent awtEvent) {
-        return true;
-    }
 }
