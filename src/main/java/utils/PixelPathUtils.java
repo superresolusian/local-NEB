@@ -2,6 +2,8 @@ package utils;
 
 import ij.IJ;
 import ij.gui.Line;
+import ij.gui.PolygonRoi;
+import ij.gui.Roi;
 import ij.process.ImageProcessor;
 import ij.process.ShortProcessor;
 
@@ -480,14 +482,23 @@ public class PixelPathUtils {
             regionProps props = getProps(s + 1, spSegmented);
             int area = props.area;
             if (area < minLength) continue;
-            int[] endPoints = props.endPoints;
-            int anchor = anchoredEndpoints(endPoints, w, c1, r1, c2, r2);
+            ArrayList<int[]> endpointsList = props.endpointsList;
+
+            IJ.log("segment value is "+(s+1)+", area is "+area+", " +
+                    "endpoint 1 is ("+endpointsList.get(0)[0]+","+endpointsList.get(0)[1]+"), " +
+                    "endpoint 2 is ("+endpointsList.get(1)[0]+","+endpointsList.get(1)[1]+")");
+
+            int anchor = anchoredEndpoints(endpointsList, c1, r1*2, c2, r2*2);
             if (anchor == ENDPOINTS_IN_DIFFERENT_CIRCLES) {
-                pixelPath = getPath(props, unravel(endPoints[0], w), unravel(endPoints[1], w), spSegmented, s + 1);
-                return pixelPath; // TODO: return this path!
+                pixelPath = getPath(props, endpointsList.get(0), endpointsList.get(1), spSegmented, s );
+                return pixelPath;
             }
-            if (anchor == ONE_ENDPOINT_IN_CIRCLE1) endpointInC1.put(s + 1, endPoints);
-            if (anchor == ONE_ENDPOINT_IN_CIRCLE2) endpointInC2.put(s + 1, endPoints);
+            int[] ep1 = endpointsList.get(0);
+            int[] ep2 = endpointsList.get(1);
+            int[] endPoints = new int[]{ravel(ep1[0], ep1[1], w), ravel(ep2[0], ep2[1], w)};
+            if (anchor == ONE_ENDPOINT_IN_CIRCLE1) endpointInC1.put(s, endPoints); //TODO:s+1?
+
+            if (anchor == ONE_ENDPOINT_IN_CIRCLE2) endpointInC2.put(s, endPoints); //TODO:s+1?
         }
 
         // no anchored endpoints for segments >minLength - check distance between centres and return straight line or null
@@ -506,11 +517,9 @@ public class PixelPathUtils {
 
         if (endpointInC1.size()==1) segmentInC1 = endpointInC1.keySet().iterator().next();
         else if (endpointInC1.size()>1) segmentInC1 = findClosestEndpoint(endpointInC1, w, c1);
-        //TODO: if segmentinC1=0 then use c1
 
         if (endpointInC2.size()==1) segmentInC2 = endpointInC2.keySet().iterator().next();
         else if (endpointInC2.size()>1) segmentInC2 = findClosestEndpoint(endpointInC2, w, c2);
-        //TODO: if segmentinc2=0 then use c2
 
         // create path
         ArrayList<int[]> pathPieces = new ArrayList<>();
@@ -609,17 +618,15 @@ public class PixelPathUtils {
         pixelPath = combinePathPieces(pathPieces);
         return pixelPath;
 
-
     }
 
-    public static int anchoredEndpoints(int[] endPoints, int w, int[] c1, double r1, int[] c2, double r2){
+    public static int anchoredEndpoints(ArrayList<int[]> endPointsList, int[] c1, double r1, int[] c2, double r2){
 
         int endpointsInC1 = 0;
         int endpointsInC2 = 0;
 
-        for(int i=0; i<endPoints.length; i++){
-            int p = endPoints[i];
-            int[] xy = unravel(p, w);
+        for(int i=0; i<endPointsList.size(); i++){
+            int[] xy = endPointsList.get(i);
 
             double distToC1 = getDistance(xy, c1);
             double distToC2 = getDistance(xy, c2);
@@ -708,6 +715,21 @@ public class PixelPathUtils {
         for(int i=0; i<combined.size(); i++) combinedArray[i] = combined.get(i);
 
         return combinedArray;
+    }
+
+    public static PolygonRoi indicesToPolyline(int[] indices, int w){
+
+        int npoints = indices.length;
+        float[] xpoints = new float[npoints];
+        float[] ypoints = new float[npoints];
+
+        for(int i=0; i<npoints; i++){
+            int[] xy = unravel(indices[i], w);
+            xpoints[i] = (float) xy[0];
+            ypoints[i] = (float) xy[1];
+        }
+        PolygonRoi polygonRoi = new PolygonRoi(xpoints, ypoints, Roi.POLYLINE);
+        return polygonRoi;
     }
 
 }

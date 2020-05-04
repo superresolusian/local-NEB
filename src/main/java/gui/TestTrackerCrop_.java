@@ -364,8 +364,8 @@ public class TestTrackerCrop_ extends BaseGUI_ {
             bestRadius1 = radii.get(bestCentre1);
             bestRadius2 = radii.get(bestCentre2);
 
-            IJ.log(("best centre 1 is at (" + bestCentre1[0] + "," + bestCentre1[1] + ")"));
-            IJ.log(("best centre 2 is at (" + bestCentre2[0] + "," + bestCentre2[1] + ")"));
+            IJ.log(("best centre 1 is at (" + bestCentre1[0] + "," + bestCentre1[1] + "), radius = "+bestRadius1));
+            IJ.log(("best centre 2 is at (" + bestCentre2[0] + "," + bestCentre2[1] + "), radius = "+bestRadius2));
 
             EllipseRoi ellipseRoi1 = new EllipseRoi(bestCentre1[0] - bestRadius1, bestCentre1[1] - bestRadius1, bestCentre1[0] + bestRadius1, bestCentre1[1] + bestRadius1, 1);
             ellipseRoi1.setPosition(n);
@@ -399,11 +399,14 @@ public class TestTrackerCrop_ extends BaseGUI_ {
             }
 
             // find skeletons with endpoints inside circles
-            ArrayList<PixelPathUtils.regionProps> frameProps = new ArrayList<>();
-            int nSegmentsFrame = (int) getMaxOfImage(spSegmented);
+            int[] bridge = getBridge(spSegmented, bestCentre1, bestRadius1, bestCentre2, bestRadius2, 2, bestRadius1+bestRadius2);
 
-            for(int s=0; s<nSegmentsFrame; s++) frameProps.add(getProps(s+1, spSegmented));
-
+            PolygonRoi polygonRoi = indicesToPolyline(bridge, w);
+            polygonRoi.setStrokeWidth(strokeWidth);
+            polygonRoi.setPosition(n);
+            polygonRoi.setStrokeColor(colors[0]);
+            polygonRoi.setName("Frame " + n + " bridge");
+            rm.addRoi(polygonRoi);
 
             double angle = getAngleBetweenPoints(bestCentre1, bestCentre2);
             Line line = new Line(bestCentre1[0] + radius1exc * cos(angle), bestCentre1[1] - radius1exc * sin(angle),
