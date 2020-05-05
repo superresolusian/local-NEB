@@ -1,7 +1,12 @@
 package utils;
 
+import ij.gui.PolygonRoi;
+import ij.gui.Roi;
+
 import java.awt.*;
 import java.util.Random;
+
+import static utils.ArrayUtils.unravel;
 
 public class RoiUtils {
 
@@ -31,4 +36,20 @@ public class RoiUtils {
 
         return colors;
     }
+
+    public static PolygonRoi indicesToPolyline(int[] indices, int w, int xtranslate, int ytranslate){
+
+        int npoints = indices.length;
+        float[] xpoints = new float[npoints];
+        float[] ypoints = new float[npoints];
+
+        for(int i=0; i<npoints; i++){
+            int[] xy = unravel(indices[i], w);
+            xpoints[i] = (float) xy[0]+xtranslate;
+            ypoints[i] = (float) xy[1]+ytranslate;
+        }
+        PolygonRoi polygonRoi = new PolygonRoi(xpoints, ypoints, Roi.POLYLINE);
+        return polygonRoi;
+    }
+
 }

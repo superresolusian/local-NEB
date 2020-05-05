@@ -121,7 +121,7 @@ public class TestTrackerCrop_ extends BaseGUI_ {
         tracker.setTrackerOptions(blurSize, invertLUT, maxFrameGap, exclusionFraction);
         tracker.setHoughOptions(minRadius, maxRadius, 1.0, thresholdModifier);
         tracker.setDebugOptions(showHough, showSegmentation);
-        tracker.setRoiOptions(rm, strokeWidth);
+        tracker.setRoiOptions(rm, strokeWidth, 1, 0, 0);
 
         tracker.doTracker();
 

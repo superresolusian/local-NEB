@@ -20,6 +20,7 @@ import static utils.HoughUtils.*;
 import static utils.ImageUtils.*;
 import static utils.PixelPathUtils.*;
 import static utils.RoiUtils.getRandomColorPair;
+import static utils.RoiUtils.indicesToPolyline;
 
 public class TrackerForSingleCrop {
 
@@ -45,6 +46,7 @@ public class TrackerForSingleCrop {
 
     public RoiManager rm;
     int strokeWidth;
+    int r, x, y;
 
     public void setImageStack(ImageStack ims){
         this.ims = ims;
@@ -67,9 +69,12 @@ public class TrackerForSingleCrop {
         this.thresholdModifier = thresholdModifier;
     }
 
-    public void setRoiOptions(RoiManager rm, int strokeWidth){
+    public void setRoiOptions(RoiManager rm, int strokeWidth, int r, int x, int y){
         this.rm = rm;
         this.strokeWidth = strokeWidth;
+        this.r = r;
+        this.x = x;
+        this.y = y;
     }
 
     public void setDebugOptions(boolean showHough, boolean showSegmentation){
@@ -98,7 +103,6 @@ public class TrackerForSingleCrop {
 
         }
     }
-
 
     public void doTracker(){
 
@@ -312,16 +316,18 @@ public class TrackerForSingleCrop {
             IJ.log(("best centre 1 is at (" + bestCentre1[0] + "," + bestCentre1[1] + "), radius = "+bestRadius1));
             IJ.log(("best centre 2 is at (" + bestCentre2[0] + "," + bestCentre2[1] + "), radius = "+bestRadius2));
 
-            EllipseRoi ellipseRoi1 = new EllipseRoi(bestCentre1[0] - bestRadius1, bestCentre1[1] - bestRadius1, bestCentre1[0] + bestRadius1, bestCentre1[1] + bestRadius1, 1);
+            EllipseRoi ellipseRoi1 = new EllipseRoi(bestCentre1[0] - bestRadius1 + x, bestCentre1[1] - bestRadius1 + y,
+                    bestCentre1[0] + bestRadius1 + x, bestCentre1[1] + bestRadius1 + y, 1);
             ellipseRoi1.setPosition(n);
             ellipseRoi1.setStrokeColor(colors[0]);
-            ellipseRoi1.setName("frame " + n + " centre 1");
+            ellipseRoi1.setName("Roi "+r+": frame " + n + " centre 1");
             rm.addRoi(ellipseRoi1);
 
-            EllipseRoi ellipseRoi2 = new EllipseRoi(bestCentre2[0] - bestRadius2, bestCentre2[1] - bestRadius2, bestCentre2[0] + bestRadius2, bestCentre2[1] + bestRadius2, 1);
+            EllipseRoi ellipseRoi2 = new EllipseRoi(bestCentre2[0] - bestRadius2 + x, bestCentre2[1] - bestRadius2 + y,
+                    bestCentre2[0] + bestRadius2 + x, bestCentre2[1] + bestRadius2 + y, 1);
             ellipseRoi2.setPosition(n);
             ellipseRoi2.setStrokeColor(colors[1]);
-            ellipseRoi2.setName("frame " + n + " centre 2");
+            ellipseRoi2.setName("Roi "+r+": frame " + n + " centre 2");
             rm.addRoi(ellipseRoi2);
 
             double radius1exc = bestRadius1 * exclusionFraction;
@@ -340,12 +346,14 @@ public class TrackerForSingleCrop {
 
             int[] bridgeNoCircle = pathExcludeCircle(bridge, bestCentre1, radius1exc, bestCentre2, radius2exc, w);
 
-            PolygonRoi polygonRoi = indicesToPolyline(bridgeNoCircle, w);
-            polygonRoi.setStrokeWidth(strokeWidth);
-            polygonRoi.setPosition(n);
-            polygonRoi.setStrokeColor(colors[0]);
-            polygonRoi.setName("Frame " + n + " bridge");
-            rm.addRoi(polygonRoi);
+            if(bridgeNoCircle.length>0) {
+                PolygonRoi polygonRoi = indicesToPolyline(bridgeNoCircle, w, x, y);
+                polygonRoi.setStrokeWidth(strokeWidth);
+                polygonRoi.setPosition(n);
+                polygonRoi.setStrokeColor(colors[0]);
+                polygonRoi.setName("Roi " + r + ": frame " + n + " bridge");
+                rm.addRoi(polygonRoi);
+            }
 
     }
 }

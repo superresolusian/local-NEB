@@ -717,19 +717,16 @@ public class PixelPathUtils {
         return combinedArray;
     }
 
-    public static PolygonRoi indicesToPolyline(int[] indices, int w){
+    public static int[] translatePath(int[] path, int x, int y, int w){
+        int nPoints = path.length;
+        int[] translatedPath = new int[nPoints];
 
-        int npoints = indices.length;
-        float[] xpoints = new float[npoints];
-        float[] ypoints = new float[npoints];
-
-        for(int i=0; i<npoints; i++){
-            int[] xy = unravel(indices[i], w);
-            xpoints[i] = (float) xy[0];
-            ypoints[i] = (float) xy[1];
+        for(int i=0; i<nPoints; i++){
+            int[] xy = unravel(path[i], w);
+            int[] xy_ = new int[]{xy[0]+x, xy[1]+y};
+            translatedPath[i] = ravel(xy_[0], xy_[1], w);
         }
-        PolygonRoi polygonRoi = new PolygonRoi(xpoints, ypoints, Roi.POLYLINE);
-        return polygonRoi;
+        return translatedPath;
     }
 
 }
