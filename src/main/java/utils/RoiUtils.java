@@ -2,13 +2,22 @@ package utils;
 
 import ij.gui.PolygonRoi;
 import ij.gui.Roi;
+import ij.plugin.frame.RoiManager;
+import ij.process.FloatProcessor;
 
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static utils.ArrayUtils.unravel;
 
 public class RoiUtils {
+
+    final protected static int ROI_NAME = 0;
+    final protected static int FRAME = 1;
+    final protected static int CENTRE_IDX = 2;
 
     private static Random random = new Random();
 
@@ -50,6 +59,60 @@ public class RoiUtils {
         }
         PolygonRoi polygonRoi = new PolygonRoi(xpoints, ypoints, Roi.POLYLINE);
         return polygonRoi;
+    }
+
+    public static ArrayList<Roi> getRoisOfType(RoiManager rm, int roiType){
+        ArrayList<Roi> roiList = new ArrayList<>();
+
+        int nRois = rm.getCount();
+
+        for(int i=0; i<nRois; i++){
+            Roi thisRoi = rm.getRoi(i);
+            int thisRoiType = thisRoi.getType();
+            if(thisRoiType==roiType) roiList.add(thisRoi);
+        }
+
+        return roiList;
+    }
+
+    public static int getNumericPropertyFromCircleName(String name, int property){
+
+        Matcher matcher = Pattern.compile("\\d+").matcher(name);
+
+        ArrayList<Integer> allMatches = new ArrayList<>();
+        while (matcher.find()) {
+            allMatches.add(Integer.parseInt(matcher.group()));
+        }
+
+        return allMatches.get(property);
+    }
+
+    public static class RoiWithInfo {
+        public Roi roi;
+        public String name;
+        public int roiNumber;
+        public int frame;
+        public int centre;
+
+        public RoiWithInfo(Roi roi){
+            this.roi = roi;
+            this.name = roi.getName();
+            this.roiNumber = getNumericPropertyFromCircleName(name, ROI_NAME);
+            this.frame = getNumericPropertyFromCircleName(name, FRAME);
+            this.centre = getNumericPropertyFromCircleName(name, CENTRE_IDX);
+        }
+
+    }
+
+    public static double getMeanSignalFromRoi(FloatProcessor fp, Roi roi){
+        Point[] points = roi.getContainedPoints();
+        int nPoints = points.length;
+        double meanVal = 0;
+        for(int i=0; i<nPoints; i++){
+            Point p = points[i];
+            meanVal += fp.getf(p.x, p.y)/nPoints;
+        }
+        return meanVal;
     }
 
 }

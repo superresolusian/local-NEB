@@ -1,5 +1,6 @@
 package utils;
 
+import ij.io.Opener;
 import ij.plugin.frame.RoiManager;
 
 public class IOUtils {
@@ -10,6 +11,13 @@ public class IOUtils {
         }
         String savePath = dir+title+"_RoiSet.zip";
         rm.runCommand("Save", savePath);
+    }
+
+    public static void openRoisFromZip(String path){
+        RoiManager rm = new RoiManager().getInstance();
+        rm.close();
+
+        new Opener().openZip(path);
     }
 
 }
