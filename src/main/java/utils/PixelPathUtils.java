@@ -684,20 +684,21 @@ public class PixelPathUtils {
 
     public static int[] getLineCoordinates(final Point p0, final Point p1, int w){
         Set<Point> line = getLineCoordinates(p0, p1);
+        return line.stream().mapToInt( point -> ravel(point.x, point.y, w) ).toArray();
 
-        ArrayList<Integer> intList = new ArrayList<>();
-
-        for(Point point:line){
-            int p = ravel(point.x, point.y, w);
-            intList.add(p);
-        }
-
-        int[] intArray = new int[intList.size()];
-        for(int i=0; i<intList.size(); i++){
-            intArray[i] = intList.get(i);
-        }
-
-        return intArray;
+//        ArrayList<Integer> intList = new ArrayList<>();
+//
+//        for(Point point:line){
+//            int p = ravel(point.x, point.y, w);
+//            intList.add(p);
+//        }
+//
+//        int[] intArray = new int[intList.size()];
+//        for(int i=0; i<intList.size(); i++){
+//            intArray[i] = intList.get(i);
+//        }
+//
+//        return intArray;
     }
 
     public static Point asPoint(int[] p){
