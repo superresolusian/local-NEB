@@ -7,19 +7,17 @@
     <parent>
         <groupId>org.scijava</groupId>
         <artifactId>pom-scijava</artifactId>
-        <version>27.0.1</version>
+        <version>28.0.0</version>
         <relativePath />
     </parent>
 
-
     <groupId>superresolusian</groupId>
-    <artifactId>pombe-tools</artifactId>
-    <version>1.0-SNAPSHOT</version>
-
+    <artifactId>pombe_tools</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
 
     <name>PombeTools</name>
-    <description>A Maven project for my PombeTools</description>
-    <url>http://mycompany.com/imagej/process-pixels/</url>
+    <description>Pombe Tools</description>
+    <url>https://github.com/superresolusian/pombe-tools</url>
     <inceptionYear>2019</inceptionYear>
     <organization>
         <name>Siuwe schmulley sholutionsh</name>
@@ -103,6 +101,5 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-    
 
 </project>
