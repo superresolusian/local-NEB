@@ -12,21 +12,21 @@
     </parent>
 
     <groupId>superresolusian</groupId>
-    <artifactId>pombe_tools</artifactId>
+    <artifactId>local_neb</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
-    <name>PombeTools</name>
-    <description>Pombe Tools</description>
-    <url>https://github.com/superresolusian/pombe-tools</url>
+    <name>LocalNEB</name>
+    <description>Local nuclear envelope breakdown</description>
+    <url>https://github.com/superresolusian/local-NEB</url>
     <inceptionYear>2019</inceptionYear>
     <organization>
-        <name>Siuwe schmulley sholutionsh</name>
-        <url>http://siuweschmulleysholutionsh.com/</url>
+        <name>MRC Lab for Molecular Cell Biology, London, UK</name>
+        <url>https://www.ucl.ac.uk/lmcb/</url>
     </organization>
 
     <licenses>
         <license>
-            <name>Simplified BSD License</name>
+            <name>MIT License</name>
             <distribution>repo</distribution>
         </license>
     </licenses>
@@ -51,9 +51,7 @@
             <name>Uwe Schmidt</name>
             <url>https://imagej.net/User:uschmidt83</url>
             <roles>
-                <role>support</role>
-                <!-- <role>codebae</role> -->
-                <!-- <role>sian-wrangler</role> -->
+                <role>reviewer</role>
             </roles>
         </contributor>
     </contributors>
@@ -66,24 +64,24 @@
     </mailingLists>
 
     <scm>
-        <connection>scm:git:git://github.com/superresolusian/pombe-tools</connection>
-        <developerConnection>scm:git:git@github.com:superresolusian/pombe-tools</developerConnection>
+        <connection>scm:git:git://github.com/superresolusian/local-NEB</connection>
+        <developerConnection>scm:git:git@github.com:superresolusian/local-NEB</developerConnection>
         <tag>HEAD</tag>
-        <url>https://github.com/superresolusian/pombe-tools</url>
+        <url>https://github.com/superresolusian/local-NEB</url>
     </scm>
     <issueManagement>
         <system>GitHub Issues</system>
-        <url>https://github.com/superresolusian/pombe-tools/issues</url>
+        <url>https://github.com/superresolusian/local-NEB/issues</url>
     </issueManagement>
     <ciManagement>
         <system>None</system>
     </ciManagement>
 
     <properties>
-        <package-name>com.mycompany.pombetools</package-name>
-        <main-class>com.mycompany.pombetools.BasicGUI_</main-class>
-        <license.licenseName>bsd_2</license.licenseName>
-        <license.copyrightOwners>My Company, Inc.</license.copyrightOwners>
+        <package-name>gui</package-name>
+        <main-class>gui.BridgeTracker_</main-class>
+        <license.licenseName>mit</license.licenseName>
+        <license.copyrightOwners>Siân Culley</license.copyrightOwners>
     </properties>
 
     <dependencies>
